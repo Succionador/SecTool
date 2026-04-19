@@ -1,0 +1,2788 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>安防设备清单统计工具</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            /* 高级灰色系配色 */
+            --bg-primary: #f5f6f8;
+            --bg-secondary: #ffffff;
+            --bg-card: #ffffff;
+            --bg-hover: #eef1f5;
+            --bg-input: #fafbfc;
+            --border-color: #e2e5ea;
+            --border-strong: #ced1d8;
+            
+            --text-primary: #1a1d23;
+            --text-secondary: #4a4f59;
+            --text-muted: #8c919a;
+            
+            --accent-primary: #3b82f6;
+            --accent-secondary: #60a5fa;
+            --accent-purple: #8b5cf6;
+            
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+        
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fb 100%);
+            border-bottom: 1px solid var(--border-color);
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .logo-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            object-fit: cover;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+        }
+        
+        .header h1 {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text-primary);
+            letter-spacing: -0.5px;
+        }
+        
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+        
+        /* Tab Navigation */
+        .tab-nav {
+            background: var(--bg-secondary);
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            padding: 0 24px;
+            overflow-x: auto;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        }
+        
+        .tab-btn {
+            padding: 16px 24px;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            position: relative;
+            transition: color 0.2s;
+            white-space: nowrap;
+        }
+        
+        .tab-btn:hover {
+            color: var(--text-secondary);
+        }
+        
+        .tab-btn.active {
+            color: var(--accent-primary);
+        }
+        
+        .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--accent-primary);
+        }
+        
+        .tab-btn .badge {
+            background: var(--bg-primary);
+            color: var(--text-muted);
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-left: 6px;
+        }
+        
+        /* Main Content */
+        .main-content {
+            padding: 24px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .page {
+            display: none;
+        }
+        
+        .page.active {
+            display: block;
+        }
+        
+        /* Cards */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 16px;
+        }
+        
+        .form-label {
+            display: block;
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 10px 14px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .form-input::placeholder {
+            color: var(--text-muted);
+        }
+        
+        /* Buttons */
+        .btn {
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6, #60a5fa);
+            color: white;
+            box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+        
+        .btn-secondary {
+            background: var(--bg-primary);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--bg-hover);
+        }
+        
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+        
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 13px;
+        }
+        
+        /* Input with Button */
+        .input-with-btn {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .input-with-btn .form-input {
+            flex: 1;
+        }
+        
+        /* Lists */
+        .item-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        
+        .list-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 13px;
+        }
+        
+        .list-item .delete-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 18px;
+            line-height: 1;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+        
+        .list-item .delete-btn:hover {
+            color: var(--danger);
+            background: rgba(239, 68, 68, 0.1);
+        }
+        
+        /* Grid Layout */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+        
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+        
+        @media (max-width: 1024px) {
+            .grid-3 {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .grid-2, .grid-3 {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Tables */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        
+        .data-table th,
+        .data-table td {
+            padding: 12px 14px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .data-table th {
+            background: var(--bg-primary);
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .data-table tr:hover td {
+            background: var(--bg-hover);
+        }
+        
+        /* Access Control Type Editor */
+        .accessory-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        
+        .accessory-tag {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 12px;
+        }
+        
+        .accessory-tag .remove {
+            cursor: pointer;
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+        
+        .accessory-tag .remove:hover {
+            color: var(--danger);
+        }
+        
+        /* Select Dropdown */
+        .form-select {
+            width: 100%;
+            padding: 10px 14px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        .form-select:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+        }
+        
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--accent-primary);
+            line-height: 1.2;
+        }
+        
+        .stat-label {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 6px;
+            font-weight: 500;
+        }
+        
+        /* Matrix Table */
+        .matrix-container {
+            overflow-x: auto;
+        }
+        
+        .matrix-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            min-width: 800px;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .matrix-table th,
+        .matrix-table td {
+            padding: 12px 14px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+        }
+        
+        .matrix-table th {
+            background: var(--bg-primary);
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .matrix-table .row-header {
+            text-align: left;
+            background: var(--bg-hover);
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+        
+        .matrix-table tr:hover td:not(.row-header) {
+            background: var(--bg-hover);
+        }
+        
+        .matrix-table td:not(.row-header) {
+            background: var(--bg-secondary);
+        }
+        
+        /* Summary Section */
+        .summary-section {
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+        
+        /* Section Divider */
+        .section-divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 24px 0 16px;
+        }
+        
+        .section-divider::before,
+        .section-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border-color);
+        }
+        
+        .section-divider span {
+            font-size: 13px;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        /* Access Control Type Card */
+        .access-type-card {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+        
+        .access-type-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .access-type-name {
+            font-weight: 600;
+            font-size: 15px;
+            color: var(--text-primary);
+        }
+        
+        .device-list {
+            margin-top: 8px;
+        }
+        
+        .device-category {
+            margin-bottom: 12px;
+        }
+        
+        .device-category-title {
+            font-size: 11px;
+            color: var(--accent-primary);
+            margin-bottom: 8px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 14px 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 14px;
+            z-index: 1000;
+            animation: slideIn 0.3s ease;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+        
+        .toast.success {
+            border-color: var(--success);
+            background: #ecfdf5;
+        }
+        
+        .toast.error {
+            border-color: var(--danger);
+            background: #fef2f2;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        /* Footer Actions */
+        .footer-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        /* Entry Form Grid - Improved Layout */
+        .entry-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+        }
+        
+        .entry-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            transition: border-color 0.2s;
+        }
+        
+        .entry-item:hover {
+            border-color: var(--border-strong);
+        }
+        
+        .entry-item label {
+            flex: 1;
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+        
+        .entry-item input {
+            width: 80px;
+            padding: 8px 12px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 14px;
+            text-align: center;
+        }
+        
+        .entry-item input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-strong);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+        
+        /* Two Column Layout for Page 1 */
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+        
+        @media (max-width: 1024px) {
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .column {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Modal Styles */
+        .modal-overlay {
+            background: rgba(26, 29, 35, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <img src="generated-images/Design_a_unique_security_surve_2026-04-16T12-16-23.png" class="logo-icon" alt="Security Logo">
+            <h1>安防设备清单统计工具</h1>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-secondary btn-sm" onclick="showExportMenu()">💾 导出配置</button>
+            <button class="btn btn-secondary btn-sm" onclick="showImportMenu()">📂 导入配置</button>
+        </div>
+    </div>
+    
+    <nav class="tab-nav">
+        <button class="tab-btn active" data-tab="page1">
+            第1步：基础配置
+            <span class="badge" id="badge1">0</span>
+        </button>
+        <button class="tab-btn" data-tab="page2">
+            第2步：数据录入
+            <span class="badge" id="badge2">0</span>
+        </button>
+        <button class="tab-btn" data-tab="page3">
+            第3步：统计矩阵
+        </button>
+        <button class="tab-btn" data-tab="page4">
+            第4步：设备清单
+        </button>
+    </nav>
+    
+    <main class="main-content">
+        <!-- Page 1: Basic Configuration -->
+        <div id="page1" class="page active">
+            <div class="two-column">
+                <div class="column">
+                    <!-- Switch Types -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">🔌 交换机型号配置</h3>
+                            <button class="btn btn-primary btn-sm" onclick="showAddSwitchTypeModal()">+ 添加型号</button>
+                        </div>
+                        <div id="switchTypeList"></div>
+                    </div>
+                    
+                    <!-- Camera Types -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">📷 摄像机类型</h3>
+                        </div>
+                        <div class="input-with-btn">
+                            <input type="text" class="form-input" id="newCameraType" placeholder="输入类型名称，如：室内半球">
+                            <button class="btn btn-primary btn-sm" onclick="addCameraType()">添加</button>
+                        </div>
+                        <div class="item-list" id="cameraTypeList"></div>
+                    </div>
+                    
+                    <!-- Floors -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">🏢 楼层</h3>
+                        </div>
+                        <div class="input-with-btn">
+                            <input type="text" class="form-input" id="newFloor" placeholder="输入楼层，如：F1">
+                            <button class="btn btn-primary btn-sm" onclick="addFloor()">添加</button>
+                        </div>
+                        <div class="item-list" id="floorList"></div>
+                    </div>
+                    
+                    <!-- Server Rooms -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">🖥️ 服务器机房</h3>
+                            <button class="btn btn-primary btn-sm" onclick="showAddServerRoomModal()">+ 添加</button>
+                        </div>
+                        <div id="serverRoomList"></div>
+                    </div>
+                    
+                    <!-- Weak Current Rooms -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">📡 弱电间</h3>
+                            <button class="btn btn-primary btn-sm" onclick="showAddWeakRoomModal()">+ 添加</button>
+                        </div>
+                        <div id="weakRoomList"></div>
+                    </div>
+                </div>
+                
+                <div class="column">
+                    <!-- Access Control Types -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">🚪 门禁类型配置</h3>
+                            <button class="btn btn-primary btn-sm" onclick="showAddAccessTypeModal()">+ 添加类型</button>
+                        </div>
+                        <div id="accessTypeList"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Page 2: Data Entry -->
+        <div id="page2" class="page">
+            <div class="stats-grid" id="entryStats"></div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">📝 录入数据</h3>
+                    <div style="display:flex;gap:8px;">
+                        <select class="form-select" id="entryWeakRoom" style="width:200px;" onchange="loadEntryData()">
+                            <option value="">-- 选择弱电间 --</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div id="entryForm">
+                    <p class="empty-state">请先在第1步配置基础数据，然后选择弱电间开始录入</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Page 3: Statistics Matrix -->
+        <div id="page3" class="page">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">📊 设备数量统计矩阵</h3>
+                    <div style="display:flex;gap:8px;">
+                        <select class="form-select" id="matrixViewType" style="width:150px;" onchange="renderMatrix()">
+                            <option value="weakroom">按弱电间</option>
+                            <option value="floor">按楼层</option>
+                            <option value="serverroom">按机房</option>
+                        </select>
+                        <button class="btn btn-primary btn-sm" onclick="exportMatrixExcel()">📥 导出Excel</button>
+                    </div>
+                </div>
+                <div class="matrix-container" id="matrixContainer">
+                    <p class="empty-state">请先完成数据录入后查看统计结果</p>
+                </div>
+            </div>
+            
+            <!-- Summary by Category -->
+            <div class="card summary-section">
+                <div class="card-header">
+                    <h3 class="card-title">📈 各类设备汇总</h3>
+                </div>
+                <table class="data-table" id="summaryTable">
+                    <thead></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Page 4: Equipment List -->
+        <div id="page4" class="page">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">📋 终端设备清单</h3>
+                    <button class="btn btn-primary" onclick="exportEquipmentListExcel()">📥 导出设备清单Excel</button>
+                </div>
+                
+                <div id="equipmentListContainer">
+                    <p class="empty-state">请先完成数据录入后查看设备清单</p>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <!-- Add Switch Type Modal -->
+    <div id="switchTypeModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;align-items:center;justify-content:center;">
+        <div style="background:#ffffff;border:1px solid #e2e5ea;border-radius:12px;padding:24px;width:90%;max-width:400px;box-shadow:0 20px 40px rgba(0,0,0,0.2);">
+            <h3 id="switchTypeModalTitle" style="margin-bottom:20px;font-size:18px;color:#1a1d23;">添加交换机型号</h3>
+            
+            <div class="form-group">
+                <label class="form-label">型号名称</label>
+                <input type="text" class="form-input" id="switchTypeName" placeholder="如：24口交换机">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">端口数量</label>
+                <input type="number" class="form-input" id="switchTypePorts" placeholder="如：24" min="8">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">预留端口比例（%）</label>
+                <input type="number" class="form-input" id="switchTypeReserved" value="10" min="0" max="30">
+                <span style="font-size:12px;color:#64748b;margin-top:4px;display:block;">留一定端口用于网络管理，常见值为10%</span>
+            </div>
+            
+            <div class="footer-actions" style="border:none;margin-top:20px;">
+                <button class="btn btn-secondary" onclick="closeSwitchTypeModal()">取消</button>
+                <button class="btn btn-primary" onclick="saveSwitchType()">保存</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Add Access Type Modal -->
+    <div id="accessTypeModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;align-items:center;justify-content:center;">
+        <div style="background:#ffffff;border:1px solid #e2e5ea;border-radius:12px;padding:24px;width:90%;max-width:500px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 40px rgba(0,0,0,0.2);">
+            <h3 id="modalTitle" style="margin-bottom:20px;font-size:18px;color:#1a1d23;">添加门禁类型</h3>
+            
+            <div class="form-group">
+                <label class="form-label">类型名称（如：A类、B类）</label>
+                <input type="text" class="form-input" id="accessTypeName" placeholder="输入类型名称">
+            </div>
+            
+            <div class="section-divider"><span>进门设备</span></div>
+            <div id="inDevicesList" class="accessory-list"></div>
+            <div style="display:flex;gap:8px;margin-top:8px;">
+                <input type="text" class="form-input" id="newInDevice" placeholder="输入设备名称">
+                <button class="btn btn-secondary btn-sm" onclick="addInDevice()">添加</button>
+            </div>
+            
+            <div class="section-divider"><span>出门设备</span></div>
+            <div id="outDevicesList" class="accessory-list"></div>
+            <div style="display:flex;gap:8px;margin-top:8px;">
+                <input type="text" class="form-input" id="newOutDevice" placeholder="输入设备名称">
+                <button class="btn btn-secondary btn-sm" onclick="addOutDevice()">添加</button>
+            </div>
+            
+            <div class="section-divider"><span>控制设备</span></div>
+            <div id="controlDevicesList" class="accessory-list"></div>
+            <div style="display:flex;gap:8px;margin-top:8px;">
+                <input type="text" class="form-input" id="newControlDevice" placeholder="输入设备名称，如：磁力锁、电插锁">
+                <button class="btn btn-secondary btn-sm" onclick="addControlDevice()">添加</button>
+            </div>
+            
+            <div class="footer-actions" style="border:none;margin-top:20px;">
+                <button class="btn btn-secondary" onclick="closeAccessTypeModal()">取消</button>
+                <button class="btn btn-primary" onclick="saveAccessType()">保存</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Add Weak Room Modal -->
+    <div id="weakRoomModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;align-items:center;justify-content:center;">
+        <div style="background:#ffffff;border:1px solid #e2e5ea;border-radius:12px;padding:24px;width:90%;max-width:400px;box-shadow:0 20px 40px rgba(0,0,0,0.2);">
+            <h3 style="margin-bottom:20px;font-size:18px;color:#1a1d23;">添加弱电间</h3>
+            
+            <div class="form-group">
+                <label class="form-label">弱电间编号</label>
+                <input type="text" class="form-input" id="weakRoomName" placeholder="如：RD-01">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">位置描述</label>
+                <input type="text" class="form-input" id="weakRoomLocation" placeholder="如：1F走廊">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">所属楼层</label>
+                <select class="form-select" id="weakRoomFloor"></select>
+            </div>
+            
+            <div class="footer-actions" style="border:none;margin-top:20px;">
+                <button class="btn btn-secondary" onclick="closeWeakRoomModal()">取消</button>
+                <button class="btn btn-primary" onclick="saveWeakRoom()">保存</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Add Server Room Modal -->
+    <div id="serverRoomModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;align-items:center;justify-content:center;">
+        <div style="background:#ffffff;border:1px solid #e2e5ea;border-radius:12px;padding:24px;width:90%;max-width:400px;box-shadow:0 20px 40px rgba(0,0,0,0.2);">
+            <h3 style="margin-bottom:20px;font-size:18px;color:#1a1d23;">添加服务器机房</h3>
+            
+            <div class="form-group">
+                <label class="form-label">机房名称</label>
+                <input type="text" class="form-input" id="serverRoomName" placeholder="如：Server Room 1">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">所属楼层</label>
+                <select class="form-select" id="serverRoomFloor"></select>
+            </div>
+            
+            <div class="footer-actions" style="border:none;margin-top:20px;">
+                <button class="btn btn-secondary" onclick="closeServerRoomModal()">取消</button>
+                <button class="btn btn-primary" onclick="saveServerRoom()">保存</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Hidden file input for import -->
+    <input type="file" id="importFileInput" accept=".json" style="display:none;" onchange="handleImport(event)">
+
+    <script>
+        // ==================== Data Store ====================
+        const DB_NAME = 'SecurityEquipmentDB';
+        const DB_VERSION = 2;
+        let db = null;
+        
+        const defaultData = {
+            switchTypes: [
+                { id: 'sw24', name: '24口交换机', ports: 24, reservedRatio: 0.1 },
+                { id: 'sw48', name: '48口交换机', ports: 48, reservedRatio: 0.1 }
+            ],
+            cameraTypes: ['室内半球', '室内枪机', '鱼眼摄像机', '室外枪机', '室外PTZ 120°', '室外PTZ 360°'],
+            accessTypes: [
+                { 
+                    id: 'A', 
+                    name: 'A类门', 
+                    inDevices: ['进门人脸+读卡器'], 
+                    outDevices: ['出门读卡器'],
+                    controlDevices: ['磁力锁']
+                },
+                { 
+                    id: 'B', 
+                    name: 'B类门', 
+                    inDevices: ['进门读卡器'], 
+                    outDevices: ['出门按钮'],
+                    controlDevices: ['磁力锁']
+                }
+            ],
+            floors: ['B1', 'F1', 'F2', 'F3'],
+            weakRooms: [],
+            serverRooms: [
+                { id: 'sr_1', name: 'Server Room 1', floor: 'F1' },
+                { id: 'sr_2', name: 'Server Room 2', floor: 'F2' }
+            ],
+            entries: {}
+        };
+        
+        let appData = JSON.parse(JSON.stringify(defaultData));
+        let inDevicesTemp = [];
+        let outDevicesTemp = [];
+        let controlDevicesTemp = [];
+        
+        // ==================== IndexedDB ====================
+        function initDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                
+                request.onerror = () => reject(request.error);
+                
+                request.onsuccess = () => {
+                    db = request.result;
+                    loadData();
+                    resolve();
+                };
+                
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains('appData')) {
+                        db.createObjectStore('appData', { keyPath: 'id' });
+                    }
+                };
+            });
+        }
+        
+        function saveData() {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(['appData'], 'readwrite');
+                const store = transaction.objectStore('appData');
+                const request = store.put({ id: 'main', ...appData });
+                request.onsuccess = () => resolve();
+                request.onerror = () => reject(request.error);
+            });
+        }
+        
+        function loadData() {
+            const transaction = db.transaction(['appData'], 'readonly');
+            const store = transaction.objectStore('appData');
+            const request = store.get('main');
+            
+            request.onsuccess = () => {
+                if (request.result) {
+                    const savedData = { ...request.result };
+                    delete savedData.id;
+                    // Merge with defaults to handle new fields
+                    appData.switchTypes = savedData.switchTypes || [...defaultData.switchTypes];
+                    appData.cameraTypes = savedData.cameraTypes || [...defaultData.cameraTypes];
+                    appData.accessTypes = savedData.accessTypes || [...defaultData.accessTypes];
+                    appData.floors = savedData.floors || [...defaultData.floors];
+                    appData.weakRooms = savedData.weakRooms || [];
+                    appData.serverRooms = (savedData.serverRooms || [...defaultData.serverRooms]).map((r, i) => {
+                        if (typeof r === 'string') return { id: 'sr_' + (i + 1), name: r, floor: '' };
+                        return { id: r.id || ('sr_' + (i + 1)), name: r.name || '', floor: r.floor || '' };
+                    });
+                    appData.entries = savedData.entries || {};
+                }
+                renderAll();
+            };
+        }
+        
+        // ==================== Tab Navigation ====================
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById(btn.dataset.tab).classList.add('active');
+                
+                if (btn.dataset.tab === 'page2') renderEntryPage();
+                if (btn.dataset.tab === 'page3') renderMatrix();
+                if (btn.dataset.tab === 'page4') renderEquipmentList();
+            });
+        });
+        
+        // ==================== Switch Types ====================
+        function showAddSwitchTypeModal(existingIndex = null) {
+            const modal = document.getElementById('switchTypeModal');
+            const title = document.getElementById('switchTypeModalTitle');
+            
+            if (existingIndex !== null) {
+                const sw = appData.switchTypes[existingIndex];
+                document.getElementById('switchTypeName').value = sw.name;
+                document.getElementById('switchTypePorts').value = sw.ports;
+                document.getElementById('switchTypeReserved').value = sw.reservedRatio * 100;
+                title.textContent = '编辑交换机型号';
+                title.dataset.editIndex = existingIndex;
+            } else {
+                document.getElementById('switchTypeName').value = '';
+                document.getElementById('switchTypePorts').value = '';
+                document.getElementById('switchTypeReserved').value = '10';
+                title.textContent = '添加交换机型号';
+                title.dataset.editIndex = '';
+            }
+            
+            modal.style.display = 'flex';
+        }
+        
+        function closeSwitchTypeModal() {
+            document.getElementById('switchTypeModal').style.display = 'none';
+        }
+        
+        function saveSwitchType() {
+            const name = document.getElementById('switchTypeName').value.trim();
+            const ports = parseInt(document.getElementById('switchTypePorts').value);
+            const reservedRatio = parseFloat(document.getElementById('switchTypeReserved').value) / 100;
+            const editIndex = document.getElementById('switchTypeModalTitle').dataset.editIndex;
+            
+            if (!name) {
+                showToast('请输入型号名称', 'error');
+                return;
+            }
+            if (!ports || ports < 8) {
+                showToast('端口数不能少于8', 'error');
+                return;
+            }
+            
+            const swData = { name, ports, reservedRatio: reservedRatio || 0.1 };
+            
+            if (editIndex !== '') {
+                appData.switchTypes[editIndex] = { ...appData.switchTypes[editIndex], ...swData };
+                showToast('交换机型号已修改', 'success');
+            } else {
+                const id = 'sw' + Date.now();
+                appData.switchTypes.push({ id, ...swData });
+                showToast('交换机型号已添加', 'success');
+            }
+            
+            closeSwitchTypeModal();
+            renderSwitchTypes();
+            saveData();
+        }
+        
+        function removeSwitchType(index) {
+            if (appData.switchTypes.length <= 1) {
+                showToast('至少保留一种交换机型号', 'error');
+                return;
+            }
+            appData.switchTypes.splice(index, 1);
+            renderSwitchTypes();
+            saveData();
+        }
+        
+        function renderSwitchTypes() {
+            const container = document.getElementById('switchTypeList');
+            if (appData.switchTypes.length === 0) {
+                container.innerHTML = '<p class="empty-state" style="padding:20px;">暂无交换机型号，点击上方按钮添加</p>';
+                return;
+            }
+            
+            container.innerHTML = appData.switchTypes.map((sw, i) => `
+                <div class="list-item">
+                    <div>
+                        <strong>${sw.name}</strong>
+                        <span style="color:#8c919a;font-size:12px;margin-left:8px;">
+                            ${sw.ports}口 · 预留${Math.round(sw.reservedRatio * 100)}%
+                        </span>
+                    </div>
+                    <div style="display:flex;gap:4px;">
+                        <button class="btn btn-secondary btn-sm" onclick="showAddSwitchTypeModal(${i})">编辑</button>
+                        <button class="delete-btn" onclick="removeSwitchType(${i})">×</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // ==================== Camera Types ====================
+        function addCameraType() {
+            const input = document.getElementById('newCameraType');
+            const name = input.value.trim();
+            if (name && !appData.cameraTypes.includes(name)) {
+                appData.cameraTypes.push(name);
+                input.value = '';
+                renderCameraTypes();
+                saveData();
+                showToast('添加成功', 'success');
+            }
+        }
+        
+        function removeCameraType(index) {
+            appData.cameraTypes.splice(index, 1);
+            renderCameraTypes();
+            saveData();
+        }
+        
+        function renderCameraTypes() {
+            const container = document.getElementById('cameraTypeList');
+            container.innerHTML = appData.cameraTypes.map((type, i) => `
+                <div class="list-item">
+                    <span>${type}</span>
+                    <button class="delete-btn" onclick="removeCameraType(${i})">×</button>
+                </div>
+            `).join('');
+            updateBadges();
+        }
+        
+        // ==================== Floors ====================
+        function addFloor() {
+            const input = document.getElementById('newFloor');
+            const name = input.value.trim();
+            if (name && !appData.floors.includes(name)) {
+                appData.floors.push(name);
+                // Sort floors
+                appData.floors.sort((a, b) => {
+                    const order = ['B2', 'B1', 'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9', 'F10'];
+                    const ai = order.indexOf(a);
+                    const bi = order.indexOf(b);
+                    return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+                });
+                input.value = '';
+                renderFloors();
+                saveData();
+                showToast('添加成功', 'success');
+            }
+        }
+        
+        function removeFloor(index) {
+            appData.floors.splice(index, 1);
+            renderFloors();
+            saveData();
+        }
+        
+        function renderFloors() {
+            const container = document.getElementById('floorList');
+            container.innerHTML = appData.floors.map((floor, i) => `
+                <div class="list-item">
+                    <span>${floor}</span>
+                    <button class="delete-btn" onclick="removeFloor(${i})">×</button>
+                </div>
+            `).join('');
+            updateBadges();
+        }
+        
+        // ==================== Server Rooms ====================
+        function showAddServerRoomModal() {
+            document.getElementById('serverRoomModal').style.display = 'flex';
+            populateServerRoomFloorSelect();
+        }
+        
+        function closeServerRoomModal() {
+            document.getElementById('serverRoomModal').style.display = 'none';
+        }
+        
+        function populateServerRoomFloorSelect() {
+            const select = document.getElementById('serverRoomFloor');
+            select.innerHTML = '<option value="">-- 选择楼层 --</option>' +
+                appData.floors.map(f => `<option value="${f}">${f}</option>`).join('');
+        }
+        
+        function saveServerRoom() {
+            const name = document.getElementById('serverRoomName').value.trim();
+            const floor = document.getElementById('serverRoomFloor').value;
+            if (!name) { showToast('请输入机房名称', 'error'); return; }
+            if (!floor) { showToast('请选择所属楼层', 'error'); return; }
+            
+            const id = 'sr_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+            appData.serverRooms.push({ id, name, floor });
+            
+            closeServerRoomModal();
+            document.getElementById('serverRoomName').value = '';
+            document.getElementById('serverRoomFloor').value = '';
+            renderServerRooms();
+            saveData();
+            showToast('服务器机房添加成功', 'success');
+        }
+        
+        function removeServerRoom(index) {
+            appData.serverRooms.splice(index, 1);
+            renderServerRooms();
+            saveData();
+        }
+        
+        function renderServerRooms() {
+            const container = document.getElementById('serverRoomList');
+            if (appData.serverRooms.length === 0) {
+                container.innerHTML = '<p class="empty-state" style="padding:20px;">暂无服务器机房，点击上方按钮添加</p>';
+                return;
+            }
+            container.innerHTML = appData.serverRooms.map((room, i) => `
+                <div class="list-item">
+                    <div>
+                        <strong>${room.name}</strong>
+                        <span style="color:#8c919a;font-size:12px;margin-left:8px;">${(room.floor || '')}</span>
+                    </div>
+                    <button class="delete-btn" onclick="removeServerRoom(${i})">×</button>
+                </div>
+            `).join('');
+            updateBadges();
+        }
+        
+        // ==================== Access Control Types ====================
+        function closeAccessTypeModal() {
+            document.getElementById('accessTypeModal').style.display = 'none';
+        }
+        
+        function addInDevice() {
+            const input = document.getElementById('newInDevice');
+            const name = input.value.trim();
+            if (name) {
+                inDevicesTemp.push(name);
+                input.value = '';
+                renderTempDevices();
+            }
+        }
+        
+        function addOutDevice() {
+            const input = document.getElementById('newOutDevice');
+            const name = input.value.trim();
+            if (name) {
+                outDevicesTemp.push(name);
+                input.value = '';
+                renderTempDevices();
+            }
+        }
+        
+        function addControlDevice() {
+            const input = document.getElementById('newControlDevice');
+            const name = input.value.trim();
+            if (name) {
+                controlDevicesTemp.push(name);
+                input.value = '';
+                renderTempDevices();
+            }
+        }
+        
+        function renderTempDevices() {
+            document.getElementById('inDevicesList').innerHTML = inDevicesTemp.map((d, i) => `
+                <div class="accessory-tag">
+                    <span>${d}</span>
+                    <span class="remove" onclick="removeTempInDevice(${i})">×</span>
+                </div>
+            `).join('');
+            
+            document.getElementById('outDevicesList').innerHTML = outDevicesTemp.map((d, i) => `
+                <div class="accessory-tag">
+                    <span>${d}</span>
+                    <span class="remove" onclick="removeTempOutDevice(${i})">×</span>
+                </div>
+            `).join('');
+            
+            document.getElementById('controlDevicesList').innerHTML = controlDevicesTemp.map((d, i) => `
+                <div class="accessory-tag">
+                    <span>${d}</span>
+                    <span class="remove" onclick="removeTempControlDevice(${i})">×</span>
+                </div>
+            `).join('');
+        }
+        
+        function removeTempInDevice(i) {
+            inDevicesTemp.splice(i, 1);
+            renderTempDevices();
+        }
+        
+        function removeTempOutDevice(i) {
+            outDevicesTemp.splice(i, 1);
+            renderTempDevices();
+        }
+        
+        function removeTempControlDevice(i) {
+            controlDevicesTemp.splice(i, 1);
+            renderTempDevices();
+        }
+        
+        function saveAccessType() {
+            const name = document.getElementById('accessTypeName').value.trim();
+            if (!name) {
+                showToast('请输入类型名称', 'error');
+                return;
+            }
+            if (inDevicesTemp.length === 0 || outDevicesTemp.length === 0) {
+                showToast('请至少添加进门和出门设备', 'error');
+                return;
+            }
+            if (controlDevicesTemp.length === 0) {
+                showToast('请至少添加一个控制设备', 'error');
+                return;
+            }
+            
+            const typeData = {
+                name,
+                inDevices: [...inDevicesTemp],
+                outDevices: [...outDevicesTemp],
+                controlDevices: [...controlDevicesTemp]
+            };
+            
+            if (editingAccessTypeIndex >= 0) {
+                // Editing existing
+                const existingId = appData.accessTypes[editingAccessTypeIndex].id;
+                appData.accessTypes[editingAccessTypeIndex] = { id: existingId, ...typeData };
+                showToast('门禁类型修改成功', 'success');
+            } else {
+                // Adding new
+                const id = 'AT' + Date.now();
+                appData.accessTypes.push({ id, ...typeData });
+                showToast('门禁类型添加成功', 'success');
+            }
+            
+            editingAccessTypeIndex = -1;
+            closeAccessTypeModal();
+            renderAccessTypes();
+            saveData();
+        }
+        
+        function removeAccessType(index) {
+            appData.accessTypes.splice(index, 1);
+            renderAccessTypes();
+            saveData();
+        }
+        
+        function renderAccessTypes() {
+            const container = document.getElementById('accessTypeList');
+            if (appData.accessTypes.length === 0) {
+                container.innerHTML = '<p class="empty-state" style="padding:20px;">暂无门禁类型，点击上方按钮添加</p>';
+                return;
+            }
+            
+            container.innerHTML = appData.accessTypes.map((type, i) => `
+                <div class="access-type-card">
+                    <div class="access-type-header">
+                        <span class="access-type-name">${type.name}</span>
+                        <div style="display:flex;gap:8px;">
+                            <button class="btn btn-secondary btn-sm" onclick="editAccessType(${i})">编辑</button>
+                            <button class="btn btn-danger btn-sm" onclick="removeAccessType(${i})">删除</button>
+                        </div>
+                    </div>
+                    <div class="device-list">
+                        <div class="device-category">
+                            <div class="device-category-title">进门设备</div>
+                            <div class="accessory-list">
+                                ${type.inDevices.map(d => `<span class="accessory-tag">${d}</span>`).join('')}
+                            </div>
+                        </div>
+                        <div class="device-category">
+                            <div class="device-category-title">出门设备</div>
+                            <div class="accessory-list">
+                                ${type.outDevices.map(d => `<span class="accessory-tag">${d}</span>`).join('')}
+                            </div>
+                        </div>
+                        <div class="device-category">
+                            <div class="device-category-title">控制设备</div>
+                            <div class="accessory-list">
+                                ${(type.controlDevices || []).map(d => `<span class="accessory-tag" style="border-color:#60a5fa;">${d}</span>`).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            updateBadges();
+        }
+        
+        let editingAccessTypeIndex = -1;
+        
+        function editAccessType(index) {
+            editingAccessTypeIndex = index;
+            const type = appData.accessTypes[index];
+            inDevicesTemp = [...type.inDevices];
+            outDevicesTemp = [...type.outDevices];
+            controlDevicesTemp = [...(type.controlDevices || [])];
+            document.getElementById('accessTypeName').value = type.name;
+            document.getElementById('modalTitle').textContent = '编辑门禁类型';
+            document.getElementById('modalTitle').dataset.mode = 'edit';
+            renderTempDevices();
+            document.getElementById('accessTypeModal').style.display = 'flex';
+        }
+        
+        function showAddAccessTypeModal() {
+            editingAccessTypeIndex = -1;
+            inDevicesTemp = [];
+            outDevicesTemp = [];
+            controlDevicesTemp = [];
+            document.getElementById('accessTypeName').value = '';
+            document.getElementById('modalTitle').textContent = '添加门禁类型';
+            document.getElementById('modalTitle').dataset.mode = 'add';
+            renderTempDevices();
+            document.getElementById('accessTypeModal').style.display = 'flex';
+        }
+        
+        // ==================== Weak Rooms ====================
+        function showAddWeakRoomModal() {
+            document.getElementById('weakRoomName').value = '';
+            document.getElementById('weakRoomLocation').value = '';
+            
+            const floorSelect = document.getElementById('weakRoomFloor');
+            floorSelect.innerHTML = appData.floors.map(f => `<option value="${f}">${f}</option>`).join('');
+            
+            document.getElementById('weakRoomModal').style.display = 'flex';
+        }
+        
+        function closeWeakRoomModal() {
+            document.getElementById('weakRoomModal').style.display = 'none';
+        }
+        
+        function saveWeakRoom() {
+            const name = document.getElementById('weakRoomName').value.trim();
+            const location = document.getElementById('weakRoomLocation').value.trim();
+            const floor = document.getElementById('weakRoomFloor').value;
+            
+            if (!name) {
+                showToast('请输入弱电间编号', 'error');
+                return;
+            }
+            
+            const id = 'WR' + Date.now();
+            appData.weakRooms.push({ id, name, location, floor });
+            
+            closeWeakRoomModal();
+            renderWeakRooms();
+            saveData();
+            showToast('弱电间添加成功', 'success');
+        }
+        
+        function removeWeakRoom(index) {
+            const room = appData.weakRooms[index];
+            if (appData.entries[room.id]) {
+                delete appData.entries[room.id];
+            }
+            appData.weakRooms.splice(index, 1);
+            renderWeakRooms();
+            saveData();
+        }
+        
+        function renderWeakRooms() {
+            const container = document.getElementById('weakRoomList');
+            if (appData.weakRooms.length === 0) {
+                container.innerHTML = '<p class="empty-state" style="padding:20px;">暂无弱电间，点击上方按钮添加</p>';
+                return;
+            }
+            
+            container.innerHTML = appData.weakRooms.map((room, i) => `
+                <div class="list-item">
+                    <div>
+                        <strong>${room.name}</strong>
+                        <span style="color:#8c919a;font-size:12px;margin-left:8px;">${(room.location || '')} · ${(room.floor || '')}</span>
+                    </div>
+                    <button class="delete-btn" onclick="removeWeakRoom(${i})">×</button>
+                </div>
+            `).join('');
+            updateBadges();
+        }
+        
+        // ==================== Data Entry Page ====================
+        function renderEntryPage() {
+            // Stats
+            const totalCameras = Object.values(appData.entries).reduce((sum, entry) => {
+                return sum + appData.cameraTypes.reduce((s, ct) => s + (entry[ct] || 0), 0);
+            }, 0);
+            
+            const totalDoors = Object.values(appData.entries).reduce((sum, entry) => {
+                return sum + appData.accessTypes.reduce((s, at) => s + (entry[at.id] || 0), 0);
+            }, 0);
+            
+            const enteredRooms = Object.keys(appData.entries).length;
+            const totalRooms = appData.weakRooms.length;
+            
+            document.getElementById('entryStats').innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-value">${totalCameras}</div>
+                    <div class="stat-label">摄像机总数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${totalDoors}</div>
+                    <div class="stat-label">门禁总数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${enteredRooms}/${totalRooms}</div>
+                    <div class="stat-label">已录入弱电间</div>
+                </div>
+            `;
+            
+            // Weak room selector
+            const selector = document.getElementById('entryWeakRoom');
+            selector.innerHTML = '<option value="">-- 选择弱电间 --</option>' + 
+                appData.weakRooms.map(r => `<option value="${r.id}">${r.name}（${r.floor}）</option>`).join('');
+            
+            loadEntryData();
+        }
+        
+        function loadEntryData() {
+            const roomId = document.getElementById('entryWeakRoom').value;
+            const container = document.getElementById('entryForm');
+            
+            if (!roomId) {
+                container.innerHTML = '<p class="empty-state">请先选择弱电间</p>';
+                return;
+            }
+            
+            if (appData.cameraTypes.length === 0 && appData.accessTypes.length === 0) {
+                container.innerHTML = '<p class="empty-state">请先在第1步添加摄像机类型和门禁类型</p>';
+                return;
+            }
+            
+            const entry = appData.entries[roomId] || {};
+            const room = appData.weakRooms.find(r => r.id === roomId);
+            
+            let html = '';
+            
+            // Camera Types
+            if (appData.cameraTypes.length > 0) {
+                html += `
+                    <div class="section-divider"><span>📷 ${room?.name || ''} - 摄像机</span></div>
+                    <div class="entry-grid">
+                        ${appData.cameraTypes.map(ct => `
+                            <div class="entry-item">
+                                <label>${ct}</label>
+                                <input type="number" 
+                                    id="entry_${roomId}_${ct}" 
+                                    value="${entry[ct] || 0}" 
+                                    min="0"
+                                    placeholder="0">
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+            
+            // Access Control Types
+            if (appData.accessTypes.length > 0) {
+                html += `
+                    <div class="section-divider"><span>🚪 ${room?.name || ''} - 门禁</span></div>
+                    <div class="entry-grid">
+                        ${appData.accessTypes.map(at => `
+                            <div class="entry-item">
+                                <label>${at.name}</label>
+                                <input type="number" 
+                                    id="entry_${roomId}_${at.id}" 
+                                    value="${entry[at.id] || 0}" 
+                                    min="0"
+                                    placeholder="0">
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+            
+            html += `
+                <div class="footer-actions">
+                    <button class="btn btn-secondary" onclick="clearEntry('${roomId}')">清空</button>
+                    <button class="btn btn-primary" onclick="saveEntry('${roomId}')">保存</button>
+                </div>
+            `;
+            
+            container.innerHTML = html;
+        }
+        
+        function saveEntry(roomId) {
+            if (!appData.entries[roomId]) {
+                appData.entries[roomId] = {};
+            }
+            
+            // Save camera entries
+            appData.cameraTypes.forEach(ct => {
+                const input = document.getElementById(`entry_${roomId}_${ct}`);
+                if (input) {
+                    appData.entries[roomId][ct] = parseInt(input.value) || 0;
+                }
+            });
+            
+            // Save access control entries
+            appData.accessTypes.forEach(at => {
+                const input = document.getElementById(`entry_${roomId}_${at.id}`);
+                if (input) {
+                    appData.entries[roomId][at.id] = parseInt(input.value) || 0;
+                }
+            });
+            
+            saveData();
+            showToast('保存成功', 'success');
+            renderEntryPage();
+        }
+        
+        function clearEntry(roomId) {
+            appData.entries[roomId] = {};
+            saveData();
+            loadEntryData();
+            showToast('已清空', 'success');
+        }
+        
+        // ==================== Statistics Matrix ====================
+        function renderMatrix() {
+            const viewType = document.getElementById('matrixViewType').value;
+            const container = document.getElementById('matrixContainer');
+            
+            let groups = [];
+            
+            if (viewType === 'weakroom') {
+                groups = appData.weakRooms.map(r => ({ id: r.id, label: `${r.name}（${r.floor}）`, cameraCount: calculateWeakRoomCameras(r.id) }));
+            } else if (viewType === 'floor') {
+                groups = appData.floors.map(f => ({ 
+                    id: f, 
+                    label: f, 
+                    cameraCount: appData.weakRooms.filter(r => r.floor === f).reduce((sum, r) => sum + calculateWeakRoomCameras(r.id), 0)
+                }));
+            } else {
+                groups = appData.serverRooms.map(r => ({ 
+                    id: r.id, 
+                    label: `${r.name}（${r.floor}）`, 
+                    cameraCount: appData.weakRooms.reduce((sum, wr) => sum + calculateWeakRoomCameras(wr.id), 0)
+                }));
+            }
+            
+            if (groups.length === 0) {
+                container.innerHTML = '<p class="empty-state">暂无数据，请先添加并录入</p>';
+                renderSummaryTable();
+                return;
+            }
+            
+            // Camera matrix
+            const cameraRows = appData.cameraTypes.map(ct => {
+                const cells = groups.map(g => {
+                    let count = 0;
+                    if (viewType === 'weakroom') {
+                        count = appData.entries[g.id]?.[ct] || 0;
+                    } else if (viewType === 'floor') {
+                        appData.weakRooms.forEach(r => {
+                            if (r.floor === g.id) count += appData.entries[r.id]?.[ct] || 0;
+                        });
+                    }
+                    return count;
+                });
+                return { label: ct, cells, total: cells.reduce((a, b) => a + b, 0) };
+            });
+            
+            // Access matrix
+            const accessRows = appData.accessTypes.map(at => {
+                const cells = groups.map(g => {
+                    let count = 0;
+                    if (viewType === 'weakroom') {
+                        count = appData.entries[g.id]?.[at.id] || 0;
+                    } else if (viewType === 'floor') {
+                        appData.weakRooms.forEach(r => {
+                            if (r.floor === g.id) count += appData.entries[r.id]?.[at.id] || 0;
+                        });
+                    }
+                    return count;
+                });
+                return { label: at.name, cells, total: cells.reduce((a, b) => a + b, 0) };
+            });
+            
+            // Build tables
+            let html = `
+                <div class="section-divider"><span>📷 摄像机统计矩阵</span></div>
+                <table class="matrix-table">
+                    <thead>
+                        <tr>
+                            <th>设备类型</th>
+                            ${groups.map(g => `<th>${g.label}</th>`).join('')}
+                            <th style="background:#eef1f5;">合计</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${cameraRows.map(r => `
+                            <tr>
+                                <td class="row-header">📷 ${r.label}</td>
+                                ${r.cells.map(c => `<td>${c}</td>`).join('')}
+                                <td style="background:#eef1f5;font-weight:600;color:#3b82f6;">${r.total}</td>
+                            </tr>
+                        `).join('')}
+                        <tr style="background:#f5f6f8;">
+                            <td class="row-header" style="color:#3b82f6;font-weight:600;">合计</td>
+                            ${groups.map((g, i) => {
+                                const colTotal = cameraRows.reduce((sum, r) => sum + r.cells[i], 0);
+                                return `<td style="font-weight:600;">${colTotal}</td>`;
+                            }).join('')}
+                            <td style="background:#eef1f5;font-weight:700;color:#8b5cf6;">
+                                ${cameraRows.reduce((sum, r) => sum + r.total, 0)}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div class="section-divider"><span>🚪 门禁统计矩阵</span></div>
+                <table class="matrix-table">
+                    <thead>
+                        <tr>
+                            <th>设备类型</th>
+                            ${groups.map(g => `<th>${g.label}</th>`).join('')}
+                            <th style="background:#eef1f5;">合计</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${accessRows.map(r => `
+                            <tr>
+                                <td class="row-header">🚪 ${r.label}</td>
+                                ${r.cells.map(c => `<td>${c}</td>`).join('')}
+                                <td style="background:#eef1f5;font-weight:600;color:#3b82f6;">${r.total}</td>
+                            </tr>
+                        `).join('')}
+                        <tr style="background:#f5f6f8;">
+                            <td class="row-header" style="color:#3b82f6;font-weight:600;">合计</td>
+                            ${groups.map((g, i) => {
+                                const colTotal = accessRows.reduce((sum, r) => sum + r.cells[i], 0);
+                                return `<td style="font-weight:600;">${colTotal}</td>`;
+                            }).join('')}
+                            <td style="background:#eef1f5;font-weight:700;color:#8b5cf6;">
+                                ${accessRows.reduce((sum, r) => sum + r.total, 0)}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            `;
+            
+            // Switch calculation for weak rooms view
+            if (viewType === 'weakroom') {
+                html += `
+                    <div class="section-divider"><span>🔌 弱电间交换机配置</span></div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>弱电间</th>
+                                <th>摄像机数量</th>
+                                <th>交换机配置</th>
+                                <th>使用端口</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${appData.weakRooms.map(r => {
+                                const cameraCount = calculateWeakRoomCameras(r.id);
+                                const summary = getSwitchSummary(cameraCount);
+                                const configText = summary.types.length > 0 
+                                    ? summary.types.map(t => `${t.type} × ${t.count}台${t.remainder > 0 ? `（用${t.remainder}口）` : ''}`).join(' + ')
+                                    : '-';
+                                const usedPorts = summary.types.reduce((sum, t) => sum + t.remainder + (t.count - (t.remainder > 0 ? 1 : 0)) * t.available, 0);
+                                return `
+                                    <tr>
+                                        <td>${r.name}（${r.floor}）</td>
+                                        <td>${cameraCount}</td>
+                                        <td style="color:#60a5fa;">${configText}</td>
+                                        <td>${cameraCount > 0 ? `${usedPorts} / ${summary.totalPorts}` : '-'}</td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                `;
+            }
+            
+            container.innerHTML = html;
+            renderSummaryTable();
+        }
+        
+        function calculateWeakRoomCameras(roomId) {
+            return appData.cameraTypes.reduce((sum, ct) => {
+                return sum + (appData.entries[roomId]?.[ct] || 0);
+            }, 0);
+        }
+        
+        /**
+         * 智能交换机计算
+         * @param {number} cameraCount - 摄像机数量
+         * @returns {Array} - 交换机配置数组 [{type, ports, available, count, remainder}]
+         */
+        function calculateSwitchCount(cameraCount) {
+            if (cameraCount === 0) return [];
+            
+            const switchTypes = appData.switchTypes || defaultData.switchTypes;
+            if (switchTypes.length === 0) return [];
+            
+            // 按端口数从大到小排序
+            const sorted = [...switchTypes].sort((a, b) => b.ports - a.ports);
+            
+            // 计算每种交换机的可用端口
+            const switches = sorted.map(sw => ({
+                ...sw,
+                available: Math.floor(sw.ports * (1 - sw.reservedRatio))
+            }));
+            
+            const result = [];
+            let remaining = cameraCount;
+            
+            // 从最大端口交换机开始
+            for (let i = 0; i < switches.length; i++) {
+                const sw = switches[i];
+                
+                if (remaining <= 0) break;
+                
+                // 如果剩余数量超过当前交换机可用端口
+                if (remaining > sw.available) {
+                    // 用满这种交换机
+                    const count = Math.floor(remaining / sw.available);
+                    remaining = remaining % sw.available;
+                    
+                    if (count > 0) {
+                        result.push({
+                            type: sw.name,
+                            ports: sw.ports,
+                            available: sw.available,
+                            count: count,
+                            remainder: 0
+                        });
+                    }
+                }
+                
+                // 如果还有剩余，但下一台大交换机会导致浪费太多
+                if (remaining > 0 && remaining < sw.available) {
+                    const nextSw = switches[i + 1];
+                    
+                    // 计算如果用当前交换机最后一台的浪费情况
+                    const wasteCurrent = sw.available - remaining;
+                    
+                    // 如果浪费超过一定比例，尝试用小交换机
+                    if (nextSw && wasteCurrent > 0) {
+                        const wasteRatio = wasteCurrent / sw.available;
+                        
+                        // 如果浪费超过30%，且小交换机可以容纳剩余设备
+                        if (wasteRatio > 0.3 && remaining <= nextSw.available) {
+                            // 检查是否加小交换机比加大交换机最后一台更划算
+                            // 条件：小交换机最后一台的使用率 > 大交换机最后一台使用率
+                            const smallUtilization = remaining / nextSw.available;
+                            const largeUtilization = remaining / sw.available;
+                            
+                            if (smallUtilization > largeUtilization * 1.5) {
+                                result.push({
+                                    type: nextSw.name,
+                                    ports: nextSw.ports,
+                                    available: nextSw.available,
+                                    count: 1,
+                                    remainder: remaining
+                                });
+                                remaining = 0;
+                                continue;
+                            }
+                        }
+                    }
+                    
+                    // 否则用当前交换机（可能有浪费）
+                    if (remaining > 0) {
+                        result.push({
+                            type: sw.name,
+                            ports: sw.ports,
+                            available: sw.available,
+                            count: 1,
+                            remainder: remaining
+                        });
+                        remaining = 0;
+                    }
+                }
+            }
+            
+            return result;
+        }
+        
+        // 简化版：返回单个弱电间的交换机汇总信息
+        function getSwitchSummary(cameraCount) {
+            const configs = calculateSwitchCount(cameraCount);
+            if (configs.length === 0) return { types: [], total: 0, totalPorts: 0 };
+            
+            return {
+                types: configs,
+                total: configs.reduce((sum, c) => sum + c.count, 0),
+                totalPorts: configs.reduce((sum, c) => sum + c.ports * c.count, 0)
+            };
+        }
+        
+        function renderSummaryTable() {
+            const table = document.getElementById('summaryTable');
+            
+            const cameraTotals = {};
+            appData.cameraTypes.forEach(ct => {
+                cameraTotals[ct] = 0;
+                Object.values(appData.entries).forEach(entry => {
+                    cameraTotals[ct] += entry[ct] || 0;
+                });
+            });
+            
+            const accessTotals = {};
+            appData.accessTypes.forEach(at => {
+                accessTotals[at.id] = 0;
+                Object.values(appData.entries).forEach(entry => {
+                    accessTotals[at.id] += entry[at.id] || 0;
+                });
+            });
+            
+            table.innerHTML = `
+                <thead>
+                    <tr>
+                        <th>设备类型</th>
+                        <th>数量</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${appData.cameraTypes.map(ct => `
+                        <tr>
+                            <td>📷 ${ct}</td>
+                            <td>${cameraTotals[ct]}</td>
+                        </tr>
+                    `).join('')}
+                    ${appData.accessTypes.map(at => `
+                        <tr>
+                            <td>🚪 ${at.name}</td>
+                            <td>${accessTotals[at.id]}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            `;
+        }
+        
+        // ==================== Equipment List ====================
+        function renderEquipmentList() {
+            const container = document.getElementById('equipmentListContainer');
+            
+            // Camera totals
+            const cameraTotals = {};
+            appData.cameraTypes.forEach(ct => {
+                cameraTotals[ct] = 0;
+                Object.values(appData.entries).forEach(entry => {
+                    cameraTotals[ct] += entry[ct] || 0;
+                });
+            });
+            
+            // Access control totals
+            const accessTotals = {};
+            appData.accessTypes.forEach(at => {
+                accessTotals[at.id] = 0;
+                Object.values(appData.entries).forEach(entry => {
+                    accessTotals[at.id] += entry[at.id] || 0;
+                });
+            });
+            
+            // Merge device totals
+            const inDeviceTotals = {};
+            const outDeviceTotals = {};
+            const controlDeviceTotals = {};
+            
+            appData.accessTypes.forEach(at => {
+                const doorCount = accessTotals[at.id];
+                if (doorCount > 0) {
+                    at.inDevices.forEach(device => {
+                        inDeviceTotals[device] = (inDeviceTotals[device] || 0) + doorCount;
+                    });
+                    at.outDevices.forEach(device => {
+                        outDeviceTotals[device] = (outDeviceTotals[device] || 0) + doorCount;
+                    });
+                    (at.controlDevices || []).forEach(device => {
+                        controlDeviceTotals[device] = (controlDeviceTotals[device] || 0) + doorCount;
+                    });
+                }
+            });
+            
+            // Switch totals - aggregate by switch type name
+            const switchTotals = {};
+            
+            appData.weakRooms.forEach(r => {
+                const cameraCount = calculateWeakRoomCameras(r.id);
+                const configs = calculateSwitchCount(cameraCount);
+                configs.forEach(cfg => {
+                    if (!switchTotals[cfg.type]) {
+                        switchTotals[cfg.type] = { count: 0, ports: cfg.ports, available: cfg.available, cameras: 0 };
+                    }
+                    switchTotals[cfg.type].count += cfg.count;
+                    switchTotals[cfg.type].cameras += cfg.remainder + (cfg.count - (cfg.remainder > 0 ? 1 : 0)) * cfg.available;
+                });
+            });
+            
+            const totalCameras = Object.values(cameraTotals).reduce((a, b) => a + b, 0);
+            const totalDoors = Object.values(accessTotals).reduce((a, b) => a + b, 0);
+            const totalSwitches = Object.values(switchTotals).reduce((sum, sw) => sum + sw.count, 0);
+            
+            if (totalCameras === 0 && totalDoors === 0) {
+                container.innerHTML = '<p class="empty-state">暂无数据，请先录入数据</p>';
+                return;
+            }
+            
+            let html = `
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value">${totalCameras}</div>
+                        <div class="stat-label">摄像机</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${totalDoors}</div>
+                        <div class="stat-label">门禁</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${totalSwitches}</div>
+                        <div class="stat-label">交换机</div>
+                    </div>
+                </div>
+                
+                <div class="section-divider"><span>📷 摄像机设备</span></div>
+            `;
+            
+            if (totalCameras > 0) {
+                html += `
+                    <table class="data-table" style="margin-bottom:24px;">
+                        <thead>
+                            <tr>
+                                <th>序号</th>
+                                <th>设备名称</th>
+                                <th>规格型号</th>
+                                <th>单位</th>
+                                <th>数量</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${appData.cameraTypes.filter(ct => cameraTotals[ct] > 0).map((ct, i) => `
+                                <tr>
+                                    <td>${i + 1}</td>
+                                    <td>网络摄像机</td>
+                                    <td>${ct}</td>
+                                    <td>台</td>
+                                    <td>${cameraTotals[ct]}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } else {
+                html += '<p style="color:#8c919a;margin-bottom:24px;">无摄像机数据</p>';
+            }
+            
+            html += `<div class="section-divider"><span>🚪 门禁设备</span></div>`;
+            
+            if (totalDoors > 0) {
+                let seq = 1;
+                html += `
+                    <table class="data-table" style="margin-bottom:24px;">
+                        <thead>
+                            <tr>
+                                <th>序号</th>
+                                <th>设备类别</th>
+                                <th>设备名称</th>
+                                <th>单位</th>
+                                <th>数量</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                Object.keys(inDeviceTotals).forEach(device => {
+                    html += `<tr><td>${seq++}</td><td>进门设备</td><td>${device}</td><td>个</td><td>${inDeviceTotals[device]}</td></tr>`;
+                });
+                
+                Object.keys(outDeviceTotals).forEach(device => {
+                    html += `<tr><td>${seq++}</td><td>出门设备</td><td>${device}</td><td>个</td><td>${outDeviceTotals[device]}</td></tr>`;
+                });
+                
+                Object.keys(controlDeviceTotals).forEach(device => {
+                    html += `<tr><td>${seq++}</td><td>控制设备</td><td>${device}</td><td>个</td><td>${controlDeviceTotals[device]}</td></tr>`;
+                });
+                
+                html += `</tbody></table>`;
+            } else {
+                html += '<p style="color:#8c919a;margin-bottom:24px;">无门禁数据</p>';
+            }
+            
+            // Switch section
+            html += `<div class="section-divider"><span>🔌 交换机设备</span></div>`;
+            
+            const switchKeys = Object.keys(switchTotals);
+            if (switchKeys.length > 0) {
+                html += `
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>序号</th>
+                                <th>设备名称</th>
+                                <th>规格型号</th>
+                                <th>端口数</th>
+                                <th>可用端口</th>
+                                <th>数量</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                let seq = 1;
+                switchKeys.forEach(name => {
+                    const sw = switchTotals[name];
+                    html += `
+                        <tr>
+                            <td>${seq++}</td>
+                            <td>接入交换机</td>
+                            <td>${name}</td>
+                            <td>${sw.ports}</td>
+                            <td>${sw.available}</td>
+                            <td>${sw.count}</td>
+                        </tr>
+                    `;
+                });
+                
+                html += `</tbody></table>`;
+            } else {
+                html += '<p style="color:#8c919a;">无交换机需求（无摄像机数据）</p>';
+            }
+            
+            container.innerHTML = html;
+        }
+        
+        // ==================== Excel Export Functions ====================
+        function exportMatrixExcel() {
+            const viewType = document.getElementById('matrixViewType').value;
+            const viewLabels = { weakroom: '弱电间', floor: '楼层', serverroom: '机房' };
+            
+            let groups = [];
+            if (viewType === 'weakroom') {
+                groups = appData.weakRooms.map(r => ({ id: r.id, label: `${r.name}（${r.floor}）` }));
+            } else if (viewType === 'floor') {
+                groups = appData.floors.map(f => ({ id: f, label: f }));
+            } else {
+                groups = appData.serverRooms.map(r => ({ id: r.id, label: `${r.name}（${r.floor}）` }));
+            }
+            
+            const wb = XLSX.utils.book_new();
+            
+            // Camera sheet
+            const cameraRows = appData.cameraTypes.map(ct => {
+                const cells = groups.map(g => {
+                    if (viewType === 'weakroom') return appData.entries[g.id]?.[ct] || 0;
+                    else if (viewType === 'floor') {
+                        let count = 0;
+                        appData.weakRooms.forEach(r => { if (r.floor === g.id) count += appData.entries[r.id]?.[ct] || 0; });
+                        return count;
+                    } else {
+                        let count = 0;
+                        appData.weakRooms.forEach(r => count += appData.entries[r.id]?.[ct] || 0);
+                        return count;
+                    }
+                });
+                return { name: ct, cells, total: cells.reduce((a, b) => a + b, 0) };
+            });
+            
+            const cameraWsData = [
+                ['摄像机统计矩阵'],
+                ['设备类型', ...groups.map(g => g.label), '合计']
+            ];
+            cameraRows.forEach(r => cameraWsData.push([r.name, ...r.cells, r.total]));
+            const cameraTotalRow = groups.map((_, i) => cameraRows.reduce((sum, r) => sum + r.cells[i], 0));
+            cameraWsData.push(['合计', ...cameraTotalRow, cameraTotalRow.reduce((a, b) => a + b, 0)]);
+            
+            const cameraWs = XLSX.utils.aoa_to_sheet(cameraWsData);
+            XLSX.utils.book_append_sheet(wb, cameraWs, '摄像机矩阵');
+            
+            // Access sheet
+            const accessRows = appData.accessTypes.map(at => {
+                const cells = groups.map(g => {
+                    if (viewType === 'weakroom') return appData.entries[g.id]?.[at.id] || 0;
+                    else if (viewType === 'floor') {
+                        let count = 0;
+                        appData.weakRooms.forEach(r => { if (r.floor === g.id) count += appData.entries[r.id]?.[at.id] || 0; });
+                        return count;
+                    } else {
+                        let count = 0;
+                        appData.weakRooms.forEach(r => count += appData.entries[r.id]?.[at.id] || 0);
+                        return count;
+                    }
+                });
+                return { name: at.name, cells, total: cells.reduce((a, b) => a + b, 0) };
+            });
+            
+            const accessWsData = [
+                ['门禁统计矩阵'],
+                ['设备类型', ...groups.map(g => g.label), '合计']
+            ];
+            accessRows.forEach(r => accessWsData.push([r.name, ...r.cells, r.total]));
+            const accessTotalRow = groups.map((_, i) => accessRows.reduce((sum, r) => sum + r.cells[i], 0));
+            accessWsData.push(['合计', ...accessTotalRow, accessTotalRow.reduce((a, b) => a + b, 0)]);
+            
+            const accessWs = XLSX.utils.aoa_to_sheet(accessWsData);
+            XLSX.utils.book_append_sheet(wb, accessWs, '门禁矩阵');
+            
+            // Switch sheet (only for weakroom view)
+            if (viewType === 'weakroom') {
+                const switchWsData = [
+                    ['弱电间交换机配置'],
+                    ['弱电间', '摄像机数量', '交换机配置', '使用端口']
+                ];
+                appData.weakRooms.forEach(r => {
+                    const cameraCount = calculateWeakRoomCameras(r.id);
+                    const summary = getSwitchSummary(cameraCount);
+                    const configText = summary.types.length > 0 
+                        ? summary.types.map(t => `${t.type} × ${t.count}台${t.remainder > 0 ? `（用${t.remainder}口）` : ''}`).join(' + ')
+                        : '-';
+                    const usedPorts = summary.types.reduce((sum, t) => sum + t.remainder + (t.count - (t.remainder > 0 ? 1 : 0)) * t.available, 0);
+                    switchWsData.push([
+                        `${r.name}（${r.floor}）`,
+                        cameraCount,
+                        configText,
+                        cameraCount > 0 ? `${usedPorts} / ${summary.totalPorts}` : '-'
+                    ]);
+                });
+                const switchWs = XLSX.utils.aoa_to_sheet(switchWsData);
+                XLSX.utils.book_append_sheet(wb, switchWs, '交换机配置');
+            }
+            
+            XLSX.writeFile(wb, `设备统计矩阵_${new Date().toLocaleDateString().replace(/\//g, '-')}.xlsx`);
+            showToast('Excel导出成功', 'success');
+        }
+        
+        function exportEquipmentListExcel() {
+            // Camera totals
+            const cameraTotals = {};
+            appData.cameraTypes.forEach(ct => {
+                cameraTotals[ct] = 0;
+                Object.values(appData.entries).forEach(entry => {
+                    cameraTotals[ct] += entry[ct] || 0;
+                });
+            });
+            
+            // Access control totals
+            const accessTotals = {};
+            appData.accessTypes.forEach(at => {
+                accessTotals[at.id] = 0;
+                Object.values(appData.entries).forEach(entry => {
+                    accessTotals[at.id] += entry[at.id] || 0;
+                });
+            });
+            
+            // Merge device totals
+            const inDeviceTotals = {};
+            const outDeviceTotals = {};
+            const controlDeviceTotals = {};
+            
+            appData.accessTypes.forEach(at => {
+                const doorCount = accessTotals[at.id];
+                if (doorCount > 0) {
+                    at.inDevices.forEach(device => {
+                        inDeviceTotals[device] = (inDeviceTotals[device] || 0) + doorCount;
+                    });
+                    at.outDevices.forEach(device => {
+                        outDeviceTotals[device] = (outDeviceTotals[device] || 0) + doorCount;
+                    });
+                    (at.controlDevices || []).forEach(device => {
+                        controlDeviceTotals[device] = (controlDeviceTotals[device] || 0) + doorCount;
+                    });
+                }
+            });
+            
+            // Switch totals - aggregate by switch type name
+            const switchTotalsForExport = {};
+            
+            appData.weakRooms.forEach(r => {
+                const cameraCount = calculateWeakRoomCameras(r.id);
+                const configs = calculateSwitchCount(cameraCount);
+                configs.forEach(cfg => {
+                    if (!switchTotalsForExport[cfg.type]) {
+                        switchTotalsForExport[cfg.type] = { count: 0 };
+                    }
+                    switchTotalsForExport[cfg.type].count += cfg.count;
+                });
+            });
+            
+            const totalCameras = Object.values(cameraTotals).reduce((a, b) => a + b, 0);
+            const totalDoors = Object.values(accessTotals).reduce((a, b) => a + b, 0);
+            const totalInDevices = Object.values(inDeviceTotals).reduce((a, b) => a + b, 0);
+            const totalOutDevices = Object.values(outDeviceTotals).reduce((a, b) => a + b, 0);
+            const totalControlDevices = Object.values(controlDeviceTotals).reduce((a, b) => a + b, 0);
+            const totalSwitches = Object.values(switchTotalsForExport).reduce((sum, sw) => sum + sw.count, 0);
+            
+            if (totalCameras === 0 && totalDoors === 0) {
+                showToast('暂无数据可导出', 'error');
+                return;
+            }
+            
+            const wsData = [
+                ['终端设备清单'],
+                ['序号', '设备类别', '设备名称', '规格型号', '单位', '数量']
+            ];
+            
+            let seq = 1;
+            
+            // Cameras
+            appData.cameraTypes.filter(ct => cameraTotals[ct] > 0).forEach(ct => {
+                wsData.push([seq++, '摄像机', '网络摄像机', ct, '台', cameraTotals[ct]]);
+            });
+            
+            // In devices
+            Object.keys(inDeviceTotals).forEach(device => {
+                wsData.push([seq++, '进门设备', device, '', '个', inDeviceTotals[device]]);
+            });
+            
+            // Out devices
+            Object.keys(outDeviceTotals).forEach(device => {
+                wsData.push([seq++, '出门设备', device, '', '个', outDeviceTotals[device]]);
+            });
+            
+            // Control devices
+            Object.keys(controlDeviceTotals).forEach(device => {
+                wsData.push([seq++, '控制设备', device, '', '个', controlDeviceTotals[device]]);
+            });
+            
+            // Switches
+            Object.keys(switchTotalsForExport).forEach(name => {
+                wsData.push([seq++, '交换机', name, '', '台', switchTotalsForExport[name].count]);
+            });
+            
+            // Summary
+            wsData.push([]);
+            wsData.push(['汇总']);
+            wsData.push(['摄像机合计', '', '', '', '', totalCameras]);
+            wsData.push(['进门设备合计', '', '', '', '', totalInDevices]);
+            wsData.push(['出门设备合计', '', '', '', '', totalOutDevices]);
+            wsData.push(['控制设备合计', '', '', '', '', totalControlDevices]);
+            wsData.push(['交换机合计', '', '', '', '', totalSwitches]);
+            wsData.push(['设备总计', '', '', '', '', totalCameras + totalDoors + totalInDevices + totalOutDevices + totalControlDevices + totalSwitches]);
+            
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, '设备清单');
+            
+            ws['!cols'] = [
+                { wch: 6 },   // 序号
+                { wch: 10 },  // 设备类别
+                { wch: 20 },  // 设备名称
+                { wch: 15 },  // 规格型号
+                { wch: 6 },   // 单位
+                { wch: 8 }    // 数量
+            ];
+            
+            XLSX.writeFile(wb, `终端设备清单_${new Date().toLocaleDateString().replace(/\//g, '-')}.xlsx`);
+            showToast('Excel导出成功', 'success');
+        }
+        
+        // ==================== Config Import/Export ====================
+        
+        // 导出菜单
+        function showExportMenu() {
+            const menu = document.createElement('div');
+            menu.className = 'dropdown-menu show';
+            menu.style.cssText = 'position:absolute;top:60px;right:24px;background:#fff;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:1000;min-width:160px;overflow:hidden;';
+            menu.innerHTML = `
+                <div class="dropdown-item" onclick="exportAllData()" style="padding:12px 16px;cursor:pointer;border-bottom:1px solid #eee;">
+                    📄 导出为 JSON
+                </div>
+                <div class="dropdown-item" onclick="exportAllDataExcel()" style="padding:12px 16px;cursor:pointer;">
+                    📊 导出为 Excel
+                </div>
+            `;
+            document.body.appendChild(menu);
+            setTimeout(() => {
+                document.addEventListener('click', function closeMenu() {
+                    menu.remove();
+                    document.removeEventListener('click', closeMenu);
+                });
+            }, 0);
+        }
+        
+        // 导入菜单
+        function showImportMenu() {
+            const menu = document.createElement('div');
+            menu.className = 'dropdown-menu show';
+            menu.style.cssText = 'position:absolute;top:60px;right:100px;background:#fff;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:1000;min-width:160px;overflow:hidden;';
+            menu.innerHTML = `
+                <div class="dropdown-item" onclick="importConfig('json')" style="padding:12px 16px;cursor:pointer;border-bottom:1px solid #eee;">
+                    📄 导入 JSON
+                </div>
+                <div class="dropdown-item" onclick="importConfig('excel')" style="padding:12px 16px;cursor:pointer;">
+                    📊 导入 Excel
+                </div>
+            `;
+            document.body.appendChild(menu);
+            setTimeout(() => {
+                document.addEventListener('click', function closeMenu() {
+                    menu.remove();
+                    document.removeEventListener('click', closeMenu);
+                });
+            }, 0);
+        }
+        
+        // 导出 JSON 格式
+        function exportAllData() {
+            const dataStr = JSON.stringify(appData, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `安防设备配置_${new Date().toLocaleDateString().replace(/\//g, '-')}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('JSON导出成功', 'success');
+        }
+        
+        // 导出 Excel 格式
+        function exportAllDataExcel() {
+            const dateStr = new Date().toLocaleDateString().replace(/\//g, '-');
+            
+            // 创建工作簿
+            const wb = XLSX.utils.book_new();
+            
+            // 1. 交换机类型表
+            if (appData.switchTypes && appData.switchTypes.length > 0) {
+                const switchData = appData.switchTypes.map((s, i) => ({
+                    '序号': i + 1,
+                    '类型名称': s.name || s.type || '',
+                    '端口数': s.ports || 0,
+                    '预留比例': Math.round((s.reservedRatio || 0) * 100),
+                    '备注': s.remark || ''
+                }));
+                const ws1 = XLSX.utils.json_to_sheet(switchData);
+                XLSX.utils.book_append_sheet(wb, ws1, '交换机类型');
+            }
+            
+            // 2. 摄像机类型表（cameraTypes 是字符串数组）
+            if (appData.cameraTypes && appData.cameraTypes.length > 0) {
+                const cameraData = appData.cameraTypes.map((c, i) => ({
+                    '序号': i + 1,
+                    '类型名称': c
+                }));
+                const ws2 = XLSX.utils.json_to_sheet(cameraData);
+                XLSX.utils.book_append_sheet(wb, ws2, '摄像机类型');
+            }
+            
+            // 3. 门禁类型表（accessTypes 是对象数组，含进/出/控制设备）
+            if (appData.accessTypes && appData.accessTypes.length > 0) {
+                const accessData = appData.accessTypes.map((a, i) => ({
+                    '序号': i + 1,
+                    '类型名称': a.name || '',
+                    '进门设备': (a.inDevices || []).join('、'),
+                    '出门设备': (a.outDevices || []).join('、'),
+                    '控制设备': (a.controlDevices || []).join('、')
+                }));
+                const ws3 = XLSX.utils.json_to_sheet(accessData);
+                XLSX.utils.book_append_sheet(wb, ws3, '门禁类型');
+            }
+            
+            // 4. 楼层信息表（floors 是字符串数组）
+            if (appData.floors && appData.floors.length > 0) {
+                const floorData = appData.floors.map((f, i) => ({
+                    '序号': i + 1,
+                    '楼层': f
+                }));
+                const ws4 = XLSX.utils.json_to_sheet(floorData);
+                XLSX.utils.book_append_sheet(wb, ws4, '楼层配置');
+            }
+            
+            // 5. 弱电间表
+            if (appData.weakRooms && appData.weakRooms.length > 0) {
+                const weakRoomData = appData.weakRooms.map((w, i) => ({
+                    '序号': i + 1,
+                    '弱电间编号': w.name || '',
+                    '位置描述': w.location || '',
+                    '所属楼层': w.floor || '',
+                    '备注': w.remark || ''
+                }));
+                const ws5 = XLSX.utils.json_to_sheet(weakRoomData);
+                XLSX.utils.book_append_sheet(wb, ws5, '弱电间');
+            }
+            
+            // 6. 服务器机房表（serverRooms 是对象数组）
+            if (appData.serverRooms && appData.serverRooms.length > 0) {
+                const serverData = appData.serverRooms.map((s, i) => ({
+                    '序号': i + 1,
+                    '名称': s.name || '',
+                    '所属楼层': s.floor || ''
+                }));
+                const ws6 = XLSX.utils.json_to_sheet(serverData);
+                XLSX.utils.book_append_sheet(wb, ws6, '服务器机房');
+            }
+            
+            // 7. 设备录入表（汇总）
+            const entriesData = [];
+            Object.entries(appData.entries || {}).forEach(([key, entry]) => {
+                if (entry && entry.devices) {
+                    entry.devices.forEach((d, i) => {
+                        entriesData.push({
+                            '位置': key,
+                            '设备类型': d.type || '',
+                            '设备名称': d.name || '',
+                            '数量': d.count || 1,
+                            '交换机': d.switchType || '',
+                            '备注': d.remark || ''
+                        });
+                    });
+                }
+            });
+            if (entriesData.length > 0) {
+                const ws7 = XLSX.utils.json_to_sheet(entriesData);
+                XLSX.utils.book_append_sheet(wb, ws7, '设备录入');
+            }
+            
+            // 保存文件
+            XLSX.writeFile(wb, `安防设备配置_${dateStr}.xlsx`);
+            showToast('Excel导出成功', 'success');
+        }
+        
+        // 导入配置（根据类型选择）
+        function importConfig(type) {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = type === 'excel' ? '.xlsx,.xls' : '.json';
+            input.onchange = (e) => {
+                if (type === 'excel') {
+                    handleExcelImport(e);
+                } else {
+                    handleJsonImport(e);
+                }
+            };
+            input.click();
+        }
+        
+        // 导入 JSON 文件
+        function handleJsonImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    applyImportedData(imported);
+                    showToast('JSON导入成功', 'success');
+                } catch (err) {
+                    showToast('JSON导入失败：文件格式错误', 'error');
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+        
+        // 导入 Excel 文件
+        function handleExcelImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    
+                    const imported = {
+                        switchTypes: [],
+                        cameraTypes: [],
+                        accessTypes: [],
+                        floors: [],
+                        weakRooms: [],
+                        serverRooms: [],
+                        entries: {}
+                    };
+                    
+                    // 解析每个工作表
+                    workbook.SheetNames.forEach(sheetName => {
+                        const sheet = workbook.Sheets[sheetName];
+                        const jsonData = XLSX.utils.sheet_to_json(sheet);
+                        
+                        switch (sheetName) {
+                            case '交换机类型':
+                                imported.switchTypes = jsonData.map(row => ({
+                                    id: row['id'] || ('sw_' + Date.now() + '_' + Math.random().toString(36).slice(2,6)),
+                                    name: row['类型名称'] || row['name'] || '',
+                                    ports: parseInt(row['端口数'] || row['ports'] || 0),
+                                    reservedRatio: (() => {
+                                        const val = parseFloat(row['预留比例'] || row['reservedRatio'] || 0);
+                                        return val > 1 ? val / 100 : val; // Excel填10转成0.1
+                                    })(),
+                                    remark: row['备注'] || row['remark'] || ''
+                                }));
+                                break;
+                            case '摄像机类型':
+                                imported.cameraTypes = jsonData.map(row => row['类型名称'] || row['name'] || '').filter(Boolean);
+                                break;
+                            case '门禁类型':
+                                imported.accessTypes = jsonData.map(row => ({
+                                    id: row['id'] || ('at_' + Date.now() + '_' + Math.random().toString(36).slice(2,6)),
+                                    name: row['类型名称'] || row['name'] || '',
+                                    inDevices: row['进门设备'] ? row['进门设备'].split(/[、,，]/).map(s => s.trim()).filter(Boolean) : [],
+                                    outDevices: row['出门设备'] ? row['出门设备'].split(/[、,，]/).map(s => s.trim()).filter(Boolean) : [],
+                                    controlDevices: row['控制设备'] ? row['控制设备'].split(/[、,，]/).map(s => s.trim()).filter(Boolean) : []
+                                }));
+                                break;
+                            case '楼层配置':
+                                imported.floors = jsonData.map(row => row['楼层'] || row['name'] || '').filter(Boolean);
+                                break;
+                            case '弱电间':
+                                imported.weakRooms = jsonData.map(row => ({
+                                    id: row['id'] || ('wr_' + Date.now() + '_' + Math.random().toString(36).slice(2,6)),
+                                    name: row['弱电间编号'] || row['名称'] || row['name'] || '',
+                                    location: (row['位置描述'] || row['位置'] || row['location'] || '').toString(),
+                                    floor: row['所属楼层'] || row['楼层'] || row['floor'] || '',
+                                    remark: row['备注'] || row['remark'] || ''
+                                }));
+                                break;
+                            case '服务器机房':
+                                imported.serverRooms = jsonData.map(row => ({
+                                    id: row['id'] || ('sr_' + Date.now() + '_' + Math.random().toString(36).slice(2,6)),
+                                    name: row['名称'] || row['name'] || '',
+                                    floor: row['所属楼层'] || row['楼层'] || row['floor'] || ''
+                                }));
+                                break;
+                            case '设备录入':
+                                // 按位置分组
+                                jsonData.forEach(row => {
+                                    const location = row['位置'] || '默认位置';
+                                    if (!imported.entries[location]) {
+                                        imported.entries[location] = { devices: [] };
+                                    }
+                                    imported.entries[location].devices.push({
+                                        type: row['设备类型'] || row['type'] || '',
+                                        name: row['设备名称'] || row['name'] || '',
+                                        count: parseInt(row['数量'] || row['count'] || 1),
+                                        switchType: row['交换机'] || row['switchType'] || '',
+                                        remark: row['备注'] || row['remark'] || ''
+                                    });
+                                });
+                                break;
+                        }
+                    });
+                    
+                    applyImportedData(imported);
+                    showToast('Excel导入成功', 'success');
+                } catch (err) {
+                    console.error('Excel import error:', err);
+                    showToast('Excel导入失败：' + err.message, 'error');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+            event.target.value = '';
+        }
+        
+        // 应用导入的数据
+        function applyImportedData(imported) {
+            appData.switchTypes = imported.switchTypes || [...defaultData.switchTypes];
+            appData.cameraTypes = imported.cameraTypes || [...defaultData.cameraTypes];
+            appData.accessTypes = imported.accessTypes || [...defaultData.accessTypes];
+            appData.floors = imported.floors || [...defaultData.floors];
+            appData.weakRooms = imported.weakRooms || [];
+            appData.serverRooms = (imported.serverRooms || [...defaultData.serverRooms]).map((r, i) => {
+                if (typeof r === 'string') return { id: 'sr_' + (i + 1), name: r, floor: '' };
+                return { id: r.id || ('sr_' + (i + 1)), name: r.name || '', floor: r.floor || '' };
+            });
+            appData.entries = imported.entries || {};
+            saveData().then(() => {
+                renderAll();
+            });
+        }
+        
+        // ==================== Utilities ====================
+        function updateBadges() {
+            document.getElementById('badge1').textContent = 
+                appData.cameraTypes.length + appData.accessTypes.length;
+            document.getElementById('badge2').textContent = 
+                Object.keys(appData.entries).length;
+        }
+        
+        function renderAll() {
+            renderSwitchTypes();
+            renderCameraTypes();
+            renderFloors();
+            renderServerRooms();
+            renderAccessTypes();
+            renderWeakRooms();
+            updateBadges();
+        }
+        
+        function showToast(message, type = 'success') {
+            const existing = document.querySelector('.tooltip');
+            if (existing) existing.remove();
+            
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => toast.remove(), 3000);
+        }
+        
+        // Enter key support
+        document.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                if (e.target.id === 'newCameraType') addCameraType();
+                if (e.target.id === 'newFloor') addFloor();
+                if (e.target.id === 'newServerRoom') addServerRoom();
+            }
+        });
+        
+        // ==================== Initialize ====================
+        initDB().then(() => {
+            renderAll();
+            showToast('数据已加载', 'success');
+        }).catch(err => {
+            console.error('DB init failed:', err);
+            renderAll();
+        });
+    </script>
+</body>
+</html>
